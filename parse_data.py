@@ -2,6 +2,9 @@ import json
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
+import re
+from datetime import datetime
+import datetime as dt
 
 
 def main():
@@ -23,7 +26,7 @@ def main():
         median_order_value = np.median(price_list)
         std_order_value = np.std(price_list)
 
-        # plot_price_distribution(price_list)
+        plot_price_distribution(price_list)
 
         # getting restaurant and item statistics
         restaurant_freq, item_freq = get_item_and_restaurant_data(order_data)
@@ -36,11 +39,17 @@ def main():
         rest_tried = restaurant_freq.shape[0]
         items_tried = item_freq.shape[0]
 
-        print(rest_tried, items_tried)
+        print(f'Number of restaurants tried:{rest_tried}')
+        print(f'Number of items tried:{items_tried}')
         print(restaurant_freq.head(15))
         print(item_freq.head(15))
 
-        print(average_order_value, median_order_value, std_order_value)
+        print(f'Average order value:{average_order_value}')
+        print(f'Median order value:{median_order_value}')
+        print(f'Std order value:{std_order_value}')
+
+        date_data = get_timeline_data(order_data)
+        plot_date_distribution(date_data)
 
 
 def get_total_price(order_data):
@@ -68,13 +77,65 @@ def get_total_price(order_data):
     return total_net_price, total_gross_price, net_price_list
 
 
+def get_timeline_data(order_data):
+    date_list = []
+    for order in order_data:
+        date_time = order['order_time']
+        # extracting datetime object from string
+        match = re.search(r'\d{4}-\d{2}-\d{2}', date_time)
+        date = datetime.strptime(match.group(), '%Y-%m-%d').date()
+        date_list.append(date.strftime('%B-%Y'))
+    return date_list
+
+
 def plot_price_distribution(price_list):
-    num_bins = 100
+    num_bins = 48
     n, bins, patches = plt.hist(price_list, num_bins)
     plt.title('Distribution of order value')
     plt.xlabel('Order value (₹)')
     plt.ylabel('Number of orders')
     plt.show()
+
+
+def plot_date_distribution(date_list):
+    year_list = []
+    freq_table = dict()
+    ticklabels = [dt.date(1900, i, 1).strftime('%b')
+                  for i in range(1, 13)]
+    # getting all years involved
+    for date in date_list:
+        year = datetime.strptime(date, '%B-%Y').date().year
+        if year not in year_list:
+            year_list.append(year)
+    year_list.sort()
+
+    # creating year table
+    for year in year_list:
+        months = [0 for i in range(1, 13)]
+        freq_table[year] = months
+
+    # populating year table
+    for date in date_list:
+        year = datetime.strptime(date, '%B-%Y').date().year
+        month = datetime.strptime(date, '%B-%Y').date().month
+        # updating year table
+        freq_table[year][month-1] += 1
+
+    colors = ['#c41f21', '#f64d4a', '#fb5e4e', '#fd7f5d',  '#fdaf87']
+    # plotting year table
+    fig, plots = plt.subplots()
+    for year in year_list:
+        x_data = [month for month in range(1, 13)]
+        y_data = [year for i in range(12)]
+        plots.scatter(x_data, y_data, s=np.array(
+            freq_table[year])*50, alpha=0.5,  c=colors[year-year_list[0]])
+    plt.title('Number of orders with time')
+    plt.yticks(year_list)
+    plots.set_xticks([i for i in range(1, 13)])
+    plots.set_xticklabels(ticklabels)
+    plt.show()
+
+    return year_list
 
 
 def get_item_and_restaurant_data(order_data):
