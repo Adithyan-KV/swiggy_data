@@ -1,0 +1,8 @@
+#ignore python bytecode files
+*.pyc
+
+#ignore the actual data json as it has identifying information
+swiggy_data.txt
+
+#ignore venv
+food
